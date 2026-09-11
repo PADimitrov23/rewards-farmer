@@ -27,7 +27,28 @@ NOISY_LIBRARIES = ("httpx", "httpcore", "urllib3", "selenium")
 # push a whole screen of text into a single record.
 MAX_SUMMARY_LENGTH = 300
 
+_STATUS_COLORS = {
+	"[OK]": "\033[92m",
+	"[SKIP]": "\033[93m",
+	"[FAIL]": "\033[91m",
+}
+_COLOR_RESET = "\033[0m"
+
 _SESSION_INFO = re.compile(r"\s*\(Session info:[^)]*\)")
+
+
+class ConsoleFormatter(logging.Formatter):
+	"""Color task outcome lines while leaving other log records unchanged."""
+
+	def format(self, record: logging.LogRecord) -> str:
+		formatted = super().format(record)
+		message = record.getMessage()
+
+		for status, color in _STATUS_COLORS.items():
+			if message.startswith(status):
+				return f"{color}{formatted}{_COLOR_RESET}"
+
+		return formatted
 
 
 def exception_summary(exc: BaseException) -> str:
@@ -99,7 +120,7 @@ def setup_logging(level: str | int | None = None, log_file: str | None = None) -
 	root = logging.getLogger()
 	root.setLevel(_resolve_level(level))
 
-	formatter = logging.Formatter(LOG_FORMAT, datefmt=DATE_FORMAT)
+	formatter = ConsoleFormatter(LOG_FORMAT, datefmt=DATE_FORMAT)
 
 	# Card descriptions are scraped from the page and are not ASCII outside the
 	# en-US market, which the Windows console encoding cannot represent. Replace
